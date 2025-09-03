@@ -94,7 +94,7 @@ class SQLParser {
                             let columnName = StringUtil.snakeize(columnInfo[1]);
                             let columnType = _this.toMySqlType(columnInfo[2]);
                             let columnSize = _this.getColumnSize(columnInfo[2]);
-                            let isNull = columnInfo[3] === 1;
+                            let isNotNull = columnInfo[3] === 1;
                             let defaultValue = columnInfo[4];
                             let isPrimaryKey = columnInfo[5];
 
@@ -107,7 +107,7 @@ class SQLParser {
                                 columnName, // The name of the column.
                                 columnType, // The SQL data type of the column (e.g., "VARCHAR", "INT", "ENUM").
                                 columnSize, // The length or precision of the column (e.g., "255" for VARCHAR, or "10,2" for DECIMAL). Optional.
-                                isNull, // Indicates whether the column allows NULL values.
+                                !isNotNull, // Indicates whether the column allows NULL values.
                                 defaultValue, // The default value assigned to the column. Optional.
                                 isPrimaryKey, // Specifies whether the column is a primary key.
                                 isAutoIncrement, // Indicates if the column value auto-increments (typically used for numeric primary keys).

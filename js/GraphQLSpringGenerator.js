@@ -77,6 +77,11 @@ class GraphQLSpringGenerator {
         return this.model;
     }
 
+    status(message)
+    {
+        document.querySelector('#status').textContent = message;
+    }
+
     /**
      * Generates all virtual files required for the Spring GraphQL project.
      * Includes entity, repository, service, controller, schema, and pom files.
@@ -96,30 +101,47 @@ class GraphQLSpringGenerator {
         };
         
         const files = [];
+        this.status("Generate ID files");
         files.push(...this.generateIdClassFiles());
+        this.status("Generate entity files");
         files.push(...this.generateEntityFiles());
+        this.status("Generate repository files");
         files.push(...this.generateRepositoryFiles());
+        this.status("Generate DTO output files");
         files.push(...this.generateConnectionFiles());
+        this.status("Generate service files");
         files.push(...this.generateServiceFiles());
+        this.status("Generate controller files");
         files.push(...this.generateControllerFiles());
+        this.status("Generate GraphQL schema file");
         files.push(...this.generateGraphQlSchema());
+        this.status("Generate page info file");
         files.push(...this.generatePageInfoFile());
+        this.status("Generate pom file");
         files.push(...this.generatePomFile());
+        this.status("Generate application file");
         files.push(...this.generateApplicationFile());
+        this.status("Generate CORS config file");
         files.push(...this.generateCorsConfigFile());
+        this.status("Generate request intecept config file");
         files.push(...this.generateRequestInterceptorFile());
-        
+        this.status("Generate data filter file");
         files.push(...this.generateDataFilterFile());
+        this.status("Generate data order file");
         files.push(...this.generateDataOrderFile());
+        this.status("Generate fetch property file");
         files.push(...this.generateFetchPropertiesFile());
+        this.status("Generate specification utility file");
         files.push(...this.generateSpecificationUtilFile());
+        this.status("Generate page utility file");
         files.push(...this.generatePageUtilFile());
-        
-        
+        this.status("Generate application property file");
         files.push(...this.generateApplicationPropertiesFile(appConfig, databaseConfig));
-        
+        this.status("Generate maven file");
         files.push(...Maven.generateMavenFile());
+        this.status("Generate maven.cmd file");
         files.push(...Maven.generateMavenCmdFile());
+        this.status("Generate maven wrapper file");
         files.push(...Maven.generateMavenWrapperFiles());
         
         return files;
@@ -132,6 +154,7 @@ class GraphQLSpringGenerator {
      * @returns {Promise<void>}
      */
     async createZipFile(model, config = {}, outputFileName = "servicegen.zip") {
+        this.status("Preparing...");
         this.packageName = config.packageName || "com.example.servicegen";
         this.groupId = config.groupId || "com.example";
         this.artifactId = config.artifactId || "servicegen";
@@ -159,11 +182,14 @@ class GraphQLSpringGenerator {
         }
         const zip = new JSZip();
         for (const file of virtualFiles) {
+            this.status(`Add ${file.name} to ZIP file`);
             zip.file(file.name, file.content);
         }
         try {
             const content = await zip.generateAsync({ type: "blob" });
+            this.status("Downloading...");
             saveAs(content, outputFileName);
+            this.status("Finish");
         } catch (error) {
             console.error('Gagal membuat file ZIP:', error);
         } finally {
@@ -357,7 +383,7 @@ public class CorsConfig implements WebMvcConfigurer {
     entities.forEach(entity => {
         let entityName = entity.name;
         let entityNameCamel = StringUtil.camelize(entityName);
-        let upperCamelEntityName = StringUtil.upperCamel(entityNameCamel);
+        let upperCamelEntityName = StringUtil.upperCamel(entity.name);
         let primaryKeys = this.getPrimaryKeys(entity);
 
         if (primaryKeys.length > 0) {
@@ -492,7 +518,7 @@ public class ${upperCamelEntityName}Controller {
         entities.forEach(entity => {
             let entityName = entity.name;
             let entityNameCamel = StringUtil.camelize(entityName);
-            let upperCamelEntityName = StringUtil.upperCamel(entityNameCamel);
+            let upperCamelEntityName = StringUtil.upperCamel(entity.name);
             let primaryKeys = this.getPrimaryKeys(entity);
             
             let initFilter = '';
@@ -510,11 +536,11 @@ public class ${upperCamelEntityName}Controller {
                 let paramList = primaryKeys.map(pk => `${TypeUtil.getJavaType(pk.type)} ${StringUtil.camelize(pk.name)}`).join(', ');
                 let callParams = primaryKeys.map(pk => StringUtil.camelize(pk.name)).join(', ');
                 let callParamNames = '"'+primaryKeys.map(pk => StringUtil.camelize(pk.name)).join('", "')+'"';
-                let methodNameSuffix = primaryKeys.map(pk => StringUtil.upperCamel(StringUtil.camelize(pk.name))).join('And');
+                let methodNameSuffix = primaryKeys.map(pk => StringUtil.upperCamel(pk.name)).join('And');
                 
                 let vals = [];
                 primaryKeys.forEach(col => {
-                    let upperColumnName = StringUtil.upperCamel(StringUtil.camelize(col.name));
+                    let upperColumnName = StringUtil.upperCamel(col.name);
                     vals.push(`input.get${upperColumnName}() == null`);
                 });
                 let updateValidation = `if(${vals.join(' || ')})
@@ -621,7 +647,7 @@ ${initFilter}
     public ${upperCamelEntityName} create${upperCamelEntityName}(${upperCamelEntityName}Create input) {
         ${upperCamelEntityName}Input saved = ${entityNameCamel}InputRepository.save(${upperCamelEntityName}Create.createEntity(input));
         return ${entityNameCamel}Repository.findOneBy${methodNameSuffix}(
-            ${primaryKeys.map(pk => `saved.get${StringUtil.upperCamel(StringUtil.camelize(pk.name))}()`).join(', ')}
+            ${primaryKeys.map(pk => `saved.get${StringUtil.upperCamel(pk.name)}()`).join(', ')}
         );
     }
 
@@ -634,7 +660,7 @@ ${initFilter}
     public ${upperCamelEntityName} update${upperCamelEntityName}(${upperCamelEntityName}Update input) {
         ${updateValidation}${upperCamelEntityName}Input saved = ${entityNameCamel}InputRepository.save(${upperCamelEntityName}Update.createEntity(input));
         return ${entityNameCamel}Repository.findOneBy${methodNameSuffix}(
-            ${primaryKeys.map(pk => `saved.get${StringUtil.upperCamel(StringUtil.camelize(pk.name))}()`).join(', ')}
+            ${primaryKeys.map(pk => `saved.get${StringUtil.upperCamel(pk.name)}()`).join(', ')}
         );
     }
 
@@ -1064,8 +1090,7 @@ public class DataOrder {
         let entities = this.selectedModel.entities;
         let file = [];
         entities.forEach(entity => {
-            let entityNameCamel = StringUtil.camelize(entity.name);
-            let upperCamelEntityName = StringUtil.upperCamel(entityNameCamel);
+            let upperCamelEntityName = StringUtil.upperCamel(entity.name);
 
 
                 // === 1. Main repository ===
@@ -1135,7 +1160,7 @@ public class ${upperCamelEntityName}Connection
 
         entities.forEach(entity => {
             let entityNameCamel = StringUtil.camelize(entity.name);
-            let upperCamelEntityName = StringUtil.upperCamel(entityNameCamel);
+            let upperCamelEntityName = StringUtil.ucfirst(entityNameCamel);
             let primaryKeys = this.getPrimaryKeys(entity);
 
             if (primaryKeys.length > 0) {
@@ -1143,7 +1168,7 @@ public class ${upperCamelEntityName}Connection
                     ? `${upperCamelEntityName}Id`
                     : TypeUtil.getJavaType(primaryKeys[0].type);
 
-                let methodNameSuffix = primaryKeys.map(pk => StringUtil.upperCamel(StringUtil.camelize(pk.name))).join('And');
+                let methodNameSuffix = primaryKeys.map(pk => StringUtil.upperCamel(pk.name)).join('And');
                 let paramList = primaryKeys.map(pk => `${TypeUtil.getJavaType(pk.type)} ${StringUtil.camelize(pk.name)}`).join(', ');
 
                 let javaLangTypes = ["String", "Long", "Integer", "Double", "Float", "Boolean", "Character", "Byte", "Short"];
@@ -1231,7 +1256,7 @@ public interface ${upperCamelEntityName}InputRepository extends JpaRepository<${
 
         entities.forEach(entity => {
             let entityName = entity.name;
-            let upperCamelEntityName = StringUtil.upperCamel(StringUtil.camelize(entityName));
+            let upperCamelEntityName = StringUtil.upperCamel(entityName);
             let entityNameSnake = StringUtil.snakeize(entityName);
             let primaryKeys = this.getPrimaryKeys(entity);
 
@@ -1258,7 +1283,7 @@ import lombok.Setter;
 import lombok.Getter;
 
 /**
- * Entity class representing the ${upperCamelEntityName} table in the database.
+ * Entity class representing the ${entityName} table in the database.
  * 
  * <p>This class is automatically generated by GraphQL Generator.</p>
  * <p>Contains fields for each column in the table, with appropriate annotations for JPA.</p>
@@ -1285,7 +1310,7 @@ import lombok.Getter;
             let columnType = column.type;
             let columnJavaType = TypeUtil.getJavaType(columnType);
             let objectName = columnCamelName.substring(0, columnCamelName.length - 2);
-            let objectType = StringUtil.upperCamel(objectName);
+            let objectType = StringUtil.ucfirst(objectName);
 
             if (column.primaryKey) {
                 entityContent += `    @Id
@@ -1375,7 +1400,7 @@ import lombok.Setter;
 import lombok.Getter;
 
 /**
- * Entity class representing the ${upperCamelEntityName} table in the database.
+ * Entity class representing the ${entityName} table in the database.
  * 
  * <p>This class is automatically generated by GraphQL Generator.</p>
  * <p>Contains fields for each column in the table, with appropriate annotations for JPA.</p>
@@ -1819,7 +1844,7 @@ public class PageUtil {
         this.model.entities.forEach(entity => {
             let primaryKeys = this.getPrimaryKeys(entity);
             if (primaryKeys.length > 1) {
-                let idClassName = `${StringUtil.upperCamel(StringUtil.camelize(entity.name))}Id`;
+                let idClassName = `${StringUtil.upperCamel(entity.name)}Id`;
                 let content = `package ${this.packageName}.entity;
 
 import java.io.Serializable;

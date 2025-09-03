@@ -42,3 +42,6 @@ Spring Boot GraphQL Generator is an automatic code generator for building GraphQ
 
 Spring Boot GraphQL Generator aims to simplify and accelerate the process of creating GraphQL applications with Spring Boot. By automating the initial setup, developers can focus on implementing business logic and custom features rather than boilerplate configuration.
 
+## Data Sample
+
+https://github.com/Planetbiru/DatabaseSample

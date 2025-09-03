@@ -146,7 +146,7 @@ window.addEventListener('resize', () => {
 function createSelector(tbody, model)
 {
     tbody.innerHTML = '';
-    if(model && model.entities)
+    if(model?.entities)
     {
         model.entities.forEach(entity => {
             let tr = document.createElement('tr');
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             let model = generator.getModel();
-            if(model && model.entities)
+            if(model?.entities)
             {
                 model.entities.forEach(entity => {
                     if(selected.includes(entity.name))

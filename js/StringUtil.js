@@ -15,13 +15,18 @@ class StringUtil
 
     /**
      * Converts a camelCase string to UpperCamelCase (PascalCase).
-     * @param {string} camelCaseStr - The camelCase string.
+     * @param {string} str - The camelCase string.
      * @returns {string} The UpperCamelCase formatted string.
      */
-    static upperCamel(camelCaseStr) {
-        return camelCaseStr
-            .replace(/([A-Z])/g, '$1')
-            .replace(/^./, str => str.toUpperCase());
+    static upperCamel(str) {
+        return StringUtil.ucfirst(StringUtil.camelize(str));
+    }
+
+    static ucfirst(str) {
+        if (!str) {
+            return str; // Handles empty or null strings
+        }
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     /**
