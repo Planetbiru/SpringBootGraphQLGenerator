@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save data whenever a field changes
     function backupForm() {
         const data = {};
-        const elements = form.querySelectorAll("input[type=text], input[type=number], input[type=password], select");
+        const elements = form.querySelectorAll("input[type=text], input[type=number], select");
         elements.forEach(el => {
             data[el.name] = el.value;
         });
