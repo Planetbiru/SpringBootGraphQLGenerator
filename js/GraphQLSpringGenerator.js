@@ -452,32 +452,83 @@ import graphql.schema.DataFetchingEnvironment;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * GraphQL Controller for managing ${upperCamelEntityName}.
+ * Provides queries and mutations for retrieving, creating, updating, and deleting ${upperCamelEntityName} data.
+ *
+ * Queries:
+ * - get${upperCamelEntityName}s: Retrieve a paginated list of ${upperCamelEntityName} with optional filtering and ordering.
+ * - get${upperCamelEntityName}: Retrieve details of a single ${upperCamelEntityName} by ID.
+ *
+ * Mutations:
+ * - create${upperCamelEntityName}: Create a new ${upperCamelEntityName}.
+ * - update${upperCamelEntityName}: Update an existing ${upperCamelEntityName}.
+ * - delete${upperCamelEntityName}: Delete an ${upperCamelEntityName} by ID.
+ */
 @Controller
 @RequiredArgsConstructor
 public class ${upperCamelEntityName}Controller {
 
     private final ${upperCamelEntityName}Service ${entityNameCamel}Service;
-
+    
+    /**
+     * Retrieves a paginated list of ${upperCamelEntityName} with optional filtering and ordering.
+     *
+     * @param pageNumber the page number to retrieve
+     * @param pageSize the number of items per page
+     * @param dataFilter list of filters to apply
+     * @param dataOrder list of ordering rules
+     * @param env GraphQL data fetching environment
+     * @return ${upperCamelEntityName}Connection containing the paginated result
+     */
     @QueryMapping
     public ${upperCamelEntityName}Connection get${upperCamelEntityName}s(@Argument(name = "pageNumber") Integer pageNumber, @Argument(name = "pageSize") Integer pageSize, @Argument(name = "dataFilter") List<DataFilter> dataFilter, @Argument(name = "dataOrder") List<DataOrder> dataOrder, DataFetchingEnvironment env) {
         return ${entityNameCamel}Service.get${upperCamelEntityName}s(pageNumber, pageSize, dataFilter, dataOrder);
     }
 
+    /**
+     * Retrieves details of a single ${upperCamelEntityName} by its ID.
+     *
+     * @param anggotaId the ID of the ${upperCamelEntityName} to retrieve
+     * @param env GraphQL data fetching environment
+     * @return ${upperCamelEntityName} entity
+     */
     @QueryMapping
     public ${upperCamelEntityName} get${upperCamelEntityName}(${paramList}, DataFetchingEnvironment env) {
         return ${entityNameCamel}Service.get${upperCamelEntityName}(${callParams});
     }
 
+    /**
+     * Creates a new ${upperCamelEntityName}.
+     *
+     * @param input the data for the new ${upperCamelEntityName}
+     * @param env GraphQL data fetching environment
+     * @return the created ${upperCamelEntityName} entity
+     */
     @MutationMapping
     public ${upperCamelEntityName} create${upperCamelEntityName}(@Argument ${upperCamelEntityName}Create input, DataFetchingEnvironment env) {
         return ${entityNameCamel}Service.create${upperCamelEntityName}(input);
     }
 
+    /**
+     * Updates an existing ${upperCamelEntityName}.
+     *
+     * @param input the updated data for the ${upperCamelEntityName}
+     * @param env GraphQL data fetching environment
+     * @return the updated ${upperCamelEntityName} entity
+     */
     @MutationMapping
     public ${upperCamelEntityName} update${upperCamelEntityName}(@Argument ${upperCamelEntityName}Update input, DataFetchingEnvironment env) {
         return ${entityNameCamel}Service.update${upperCamelEntityName}(input);
     }
 
+    /**
+     * Deletes an ${upperCamelEntityName} by its ID.
+     *
+     * @param anggotaId the ID of the ${upperCamelEntityName} to delete
+     * @param env GraphQL data fetching environment
+     * @return true if deletion was successful
+     */
     @MutationMapping
     public Boolean delete${upperCamelEntityName}(${paramList}, DataFetchingEnvironment env) {
         ${entityNameCamel}Service.delete${upperCamelEntityName}(${callParams});
@@ -1193,12 +1244,12 @@ public class ${upperCamelEntityName}Connection
      * Pagination metadata, including total records, total pages,
      * current page number, and page size.
      */
-    private PageInfo pageInfo;
+    PageInfo pageInfo;
 
     /**
      * The underlying paginated data of {@link ${upperCamelEntityName}} entities.
      */
-    private Page<${upperCamelEntityName}> data;
+    Page<${upperCamelEntityName}> data;
 
     /**
      * Constructs a new {@code ${upperCamelEntityName}Connection} from a Spring Data {@link Page}.
@@ -1418,20 +1469,20 @@ import lombok.Getter;
             if (_this.isForeignKey(_this.model.entities, entity, column)) {
                 
                 entityContent += `    @Column(name = "${columnName}")
-    private ${columnJavaType} ${columnCamelName};
+    ${columnJavaType} ${columnCamelName};
 
 `;
                 
                 let fk = `@ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "${column.name}", referencedColumnName = "${column.name}", insertable=false, updatable=false)
-    private ${objectType} ${objectName}`;
+    ${objectType} ${objectName}`;
                 entityContent += `    ${fk};
 
 `;
                 relationProps.push({ name: objectName, type: objectType });
             } else {
                 entityContent += `    @Column(name = "${columnName}")
-    private ${columnJavaType} ${columnCamelName};
+    ${columnJavaType} ${columnCamelName};
 
 `;
             }
@@ -1443,7 +1494,7 @@ import lombok.Getter;
                 if (column.primaryKey && !column.autoIncrement) {
                     entityContent += `    @ManyToOne
     @JoinColumn(name = "${columnName}", referencedColumnName = "${columnName}", insertable = false, updatable = false)
-    private ${objectType} ${objectName};
+    ${objectType} ${objectName};
 
 `;
                     
@@ -1530,7 +1581,7 @@ import lombok.Getter;
 
             // Semua kolom di Input versi column biasa
             entityInputContent += `    @Column(name = "${columnName}")
-    private ${columnJavaType} ${columnCamelName};
+    ${columnJavaType} ${columnCamelName};
 
 `;
         });
@@ -1618,7 +1669,7 @@ import ${this.packageName}.entity.${upperCamelEntityName}Input;
             let columnJavaType = TypeUtil.getJavaType(columnType);
 
             if (!column.autoIncrement) {
-                entityCreateContent += `    private ${columnJavaType} ${columnCamelName};
+                entityCreateContent += `    ${columnJavaType} ${columnCamelName};
 `;
             }
         });
@@ -1680,7 +1731,7 @@ import ${this.packageName}.entity.${upperCamelEntityName}Input;
             let columnType = column.type;
             let columnJavaType = TypeUtil.getJavaType(columnType);
 
-            entityUpdateContent += `    private ${columnJavaType} ${columnCamelName};
+            entityUpdateContent += `    ${columnJavaType} ${columnCamelName};
 `;
         });
 
@@ -2038,7 +2089,7 @@ public class ${idClassName} implements Serializable {
                         }
                     }
 
-                    content += `    private ${pkJavaType} ${pkNameCamel};
+                    content += `    ${pkJavaType} ${pkNameCamel};
 
 `;
                     
