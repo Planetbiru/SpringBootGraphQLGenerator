@@ -86,7 +86,7 @@ class Column {
      */
     constructor(name, type = "VARCHAR", length = "", nullable = false, defaultValue = "", primaryKey = false, autoIncrement = false, values = "", description = "") //NOSONAR
     {
-        if(type.toUpperCase().indexOf('BIGINT') && length == '')
+        if(type.toUpperCase().indexOf('BIGINT') != -1 && length == '')
         {
             length = '20';
         }

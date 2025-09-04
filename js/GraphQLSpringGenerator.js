@@ -101,48 +101,67 @@ class GraphQLSpringGenerator {
         };
         
         const files = [];
-        this.status("Generate ID files");
-        files.push(...this.generateIdClassFiles());
-        this.status("Generate entity files");
-        files.push(...this.generateEntityFiles());
-        this.status("Generate repository files");
-        files.push(...this.generateRepositoryFiles());
-        this.status("Generate DTO output files");
-        files.push(...this.generateConnectionFiles());
-        this.status("Generate service files");
-        files.push(...this.generateServiceFiles());
-        this.status("Generate controller files");
-        files.push(...this.generateControllerFiles());
-        this.status("Generate GraphQL schema file");
-        files.push(...this.generateGraphQlSchema());
-        this.status("Generate page info file");
-        files.push(...this.generatePageInfoFile());
+
+        // 1. Build & Project Setup
         this.status("Generate pom file");
         files.push(...this.generatePomFile());
-        this.status("Generate application file");
-        files.push(...this.generateApplicationFile());
-        this.status("Generate CORS config file");
-        files.push(...this.generateCorsConfigFile());
-        this.status("Generate request intecept config file");
-        files.push(...this.generateRequestInterceptorFile());
-        this.status("Generate data filter file");
-        files.push(...this.generateDataFilterFile());
-        this.status("Generate data order file");
-        files.push(...this.generateDataOrderFile());
-        this.status("Generate fetch property file");
-        files.push(...this.generateFetchPropertiesFile());
-        this.status("Generate specification utility file");
-        files.push(...this.generateSpecificationUtilFile());
-        this.status("Generate page utility file");
-        files.push(...this.generatePageUtilFile());
-        this.status("Generate application property file");
-        files.push(...this.generateApplicationPropertiesFile(appConfig, databaseConfig));
         this.status("Generate maven file");
         files.push(...Maven.generateMavenFile());
         this.status("Generate maven.cmd file");
         files.push(...Maven.generateMavenCmdFile());
         this.status("Generate maven wrapper file");
         files.push(...Maven.generateMavenWrapperFiles());
+
+        // 2. Application Bootstrap
+        this.status("Generate application file");
+        files.push(...this.generateApplicationFile());
+        this.status("Generate application property file");
+        files.push(...this.generateApplicationPropertiesFile(appConfig, databaseConfig));
+
+        // 3. Core Domain
+        this.status("Generate ID files");
+        files.push(...this.generateIdClassFiles());
+        this.status("Generate entity files");
+        files.push(...this.generateEntityFiles());
+        this.status("Generate DTO files");
+        files.push(...this.generateDtoFiles());
+        this.status("Generate DTO output files");
+        files.push(...this.generateConnectionFiles());
+
+        // 4. Data Access
+        this.status("Generate repository files");
+        files.push(...this.generateRepositoryFiles());
+
+        // 5. Utilities
+        this.status("Generate page info file");
+        files.push(...this.generatePageInfoFile());
+        this.status("Generate page utility file");
+        files.push(...this.generatePageUtilFile());
+        this.status("Generate specification utility file");
+        files.push(...this.generateSpecificationUtilFile());
+        this.status("Generate fetch property file");
+        files.push(...this.generateFetchPropertiesFile());
+        this.status("Generate data filter file");
+        files.push(...this.generateDataFilterFile());
+        this.status("Generate data order file");
+        files.push(...this.generateDataOrderFile());
+
+        // 6. Business Logic
+        this.status("Generate service files");
+        files.push(...this.generateServiceFiles());
+
+        // 7. API Layer
+        this.status("Generate controller files");
+        files.push(...this.generateControllerFiles());
+        this.status("Generate GraphQL schema file");
+        files.push(...this.generateGraphQlSchema());
+
+        // 8. Configuration
+        this.status("Generate CORS config file");
+        files.push(...this.generateCorsConfigFile());
+        this.status("Generate request interceptor file");
+        files.push(...this.generateRequestInterceptorFile());
+
         
         return files;
     }
@@ -154,6 +173,11 @@ class GraphQLSpringGenerator {
      * @returns {Promise<void>}
      */
     async createZipFile(model, config = {}, outputFileName = "servicegen.zip") {
+        const progressBar = document.querySelector('.progress-bar');
+        progressBar.style.transition = "none";
+        progressBar.style.width = "0%";
+        progressBar.setAttribute("aria-valuenow", 0);
+        let _this = this;
         this.status("Preparing...");
         this.packageName = config.packageName || "com.example.servicegen";
         this.groupId = config.groupId || "com.example";
@@ -176,20 +200,36 @@ class GraphQLSpringGenerator {
         loadingMessage.style.display = 'block';
         const virtualFiles = this.generateVirtualFiles();
         if (virtualFiles.length === 0) {
-            alert('Tidak ada file untuk dikompresi.');
             loadingMessage.style.display = 'none';
             return;
         }
         const zip = new JSZip();
         for (const file of virtualFiles) {
-            this.status(`Add ${file.name} to ZIP file`);
             zip.file(file.name, file.content);
         }
         try {
-            const content = await zip.generateAsync({ type: "blob" });
-            this.status("Downloading...");
+            _this.status("Generating ZIP file...");
+            
+            const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+                if (metadata.percent) {
+                    let percent = metadata.percent.toFixed(2);
+                    let currentFile = metadata.currentFile || "";
+
+                    // update status text
+                    _this.status(`${currentFile}`);
+
+                    // update progress bar
+                    progressBar.style.width = percent + "%";
+                    progressBar.setAttribute("aria-valuenow", percent);
+                }
+            });
+            _this.status("Finish");
+            progressBar.style.width = "100%";
+            progressBar.setAttribute("aria-valuenow", 100);
             saveAs(content, outputFileName);
-            this.status("Finish");
+
+            
+            
         } catch (error) {
             console.error('Gagal membuat file ZIP:', error);
         } finally {
@@ -684,6 +724,13 @@ ${initFilter}
         return file;
     }
     
+    /**
+     * Generates a Java utility file named 'PageUtil.java' for Spring Data JPA.
+     * The file contains a static method to create a Pageable object for paginated
+     * and sorted database queries.
+     *
+     * @returns {Array<Object>} An array containing a single object with the file name and its content.
+     */
     gereratePageUtilFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -725,6 +772,16 @@ public class PageUtil {
         }];
     }
     
+    /**
+     * Generates the source code for a Java utility file named 'SpecificationUtil.java'.
+     * This utility class is designed for creating dynamic JPA Specifications from
+     * a list of DataFilter objects, supporting various data types and filter operations.
+     *
+     * @returns {Array<Object>} An array containing a single object representing the generated file.
+     * The object has two properties:
+     * - `name`: A string for the file path, formatted as `[source-directory]/utils/SpecificationUtil.java`.
+     * - `content`: A string containing the complete Java source code for the utility class.
+     */
     generateSpecificationUtilFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -999,6 +1056,16 @@ public class SpecificationUtil {
         }];
     }
     
+    /**
+     * Generates the source code for a Java utility file named 'SpecificationUtil.java'.
+     * This utility class is designed for creating dynamic JPA Specifications from
+     * a list of DataFilter objects, supporting various data types and filter operations.
+     *
+     * @returns {Array<Object>} An array containing a single object representing the generated file.
+     * The object has two properties:
+     * - `name`: A string for the file path, formatted as `[source-directory]/utils/SpecificationUtil.java`.
+     * - `content`: A string containing the complete Java source code for the utility class.
+     */
     generateDataFilterFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -1019,6 +1086,16 @@ public class DataFilter {
         }];
     }
     
+    /**
+     * Generates the source code for a Java utility file named 'SpecificationUtil.java'.
+     * This utility class is designed for creating dynamic JPA Specifications from
+     * a list of DataFilter objects, supporting various data types and filter operations.
+     *
+     * @returns {Array<Object>} An array containing a single object representing the generated file.
+     * The object has two properties:
+     * - `name`: A string for the file path, formatted as `[source-directory]/utils/SpecificationUtil.java`.
+     * - `content`: A string containing the complete Java source code for the utility class.
+     */
     generateDataOrderFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -1244,11 +1321,28 @@ public interface ${upperCamelEntityName}InputRepository extends JpaRepository<${
         return file;
     }
 
-
-
-
-
-
+    /**
+     * Generates Java entity classes based on the selected model definition.
+     *
+     * For each entity in the model, this method produces two files:
+     *
+     * - Main Entity Class:
+     *   - Represents the database table with fields mapped to columns.
+     *   - Includes JPA annotations for persistence, primary keys, and relationships
+     *     (e.g., @ManyToOne, @JoinColumn).
+     *   - Uses Lombok annotations (@Getter, @Setter).
+     *   - Supports @IdClass for composite primary keys.
+     *
+     * - Input Entity Class:
+     *   - Simplified version of the entity.
+     *   - Intended for input objects (e.g., GraphQL mutations).
+     *   - Contains only basic column mappings without relationship handling.
+     *
+     * @returns {Array<Object>} Array of generated file objects.
+     * Each object contains:
+     *   - {string} name: The file path of the generated Java source file.
+     *   - {string} content: The complete Java source code of the entity.
+     */
     generateEntityFiles() {
         let _this = this;
         let entities = this.selectedModel.entities;
@@ -1444,12 +1538,47 @@ import lombok.Getter;
         entityInputContent += `}
 `;
 
-        file.push({
-            name: this.createSourceDirectoryFromArtefact(this.packageName) + `entity/${upperCamelEntityName}Input.java`,
-            content: entityInputContent
+            file.push({
+                name: this.createSourceDirectoryFromArtefact(this.packageName) + `entity/${upperCamelEntityName}Input.java`,
+                content: entityInputContent
+            });
+
         });
+        return file;
+    }
+    /**
+     * Generates Data Transfer Object (DTO) classes for each entity in the selected model.
+     *
+     * For every entity, this method creates two DTO classes:
+     *
+     * - Create DTO:
+     *   - Represents input fields required for the CREATE mutation of the entity table.
+     *   - Excludes auto-incremented columns.
+     *   - Provides a {@code createEntity()} static factory method to convert the DTO
+     *     into an {@code EntityInput}.
+     *
+     * - Update DTO:
+     *   - Represents input fields required for the UPDATE mutation of the entity table.
+     *   - Includes all columns.
+     *   - Provides a {@code createEntity()} static factory method to convert the DTO
+     *     into an {@code EntityInput}.
+     *
+     * Both DTOs use Lombok annotations (@Getter, @Setter) and Spring's {@code BeanUtils}
+     * for property copying.
+     *
+     * @returns {Array<Object>} Array of generated file objects.
+     * Each object contains:
+     *   - {string} name: The file path of the generated Java source file.
+     *   - {string} content: The complete Java source code of the DTO.
+     */
+    generateDtoFiles() {
+        let entities = this.selectedModel.entities;
+        let file = [];
 
-
+        entities.forEach(entity => {
+            let entityName = entity.name;
+            let upperCamelEntityName = StringUtil.upperCamel(entityName);
+            let entityNameSnake = StringUtil.snakeize(entityName);
 
 
         // === 3. DTO for
@@ -1586,6 +1715,23 @@ import ${this.packageName}.entity.${upperCamelEntityName}Input;
         return file;
     }
     
+    /**
+     * Generates the `QueryPredicateMapping` utility Java file.
+     *
+     * This utility class provides helper methods for managing query predicates,
+     * including filtering and ordering configurations. It ensures only valid and
+     * supported fields are used during data fetching.
+     *
+     * The generated class includes:
+     * - A `filter` map that stores filter configurations keyed by field identifiers.
+     * - An `order` list to store order configurations.
+     * - Methods to add filters, validate requested fields, and filter out unsupported fields.
+     *
+     * @returns {Array<Object>} An array containing the generated Java file object.
+     * Each object has:
+     *   - {string} name: The full file path of the generated Java file.
+     *   - {string} content: The complete Java source code of `QueryPredicateMapping`.
+     */
     generateFetchPropertiesFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -1696,6 +1842,23 @@ public class QueryPredicateMapping {
         }];
     }
     
+    /**
+     * Generates the `PageUtil` utility Java file.
+     *
+     * The generated `PageUtil` class provides helper methods to simplify
+     * pagination and sorting with Spring Data JPA. It wraps the creation of
+     * {@link Pageable} and {@link Sort} objects while applying defaults and
+     * mapping custom field names.
+     *
+     * Features included in the generated class:
+     * - `pageRequest`: Creates a `Pageable` with safe defaults for page number and size,
+     *   while applying sorting logic.
+     * - `createSortFromList`: Converts a list of `DataOrder` objects into a Spring Data `Sort`.
+     *
+     * @returns {Array<Object>} An array with a single Java file definition:
+     *   - {string} name: The generated file path for `PageUtil.java`.
+     *   - {string} content: The full Java source code for the `PageUtil` class.
+     */
     generatePageUtilFile()
     {
         const content = `package ${this.packageName}.utils;
@@ -1915,6 +2078,25 @@ public class ${idClassName} implements Serializable {
         return [{ name: "src/main/resources/graphql/schema.graphqls", content: content }];
     }
 
+    /**
+     * Generates the `PageInfo` utility Java file.
+     *
+     * The generated `PageInfo` class is a helper wrapper around Spring Data's {@link Page}
+     * object that exposes pagination metadata in a simplified structure. This is useful
+     * for GraphQL or REST APIs where you need to send pagination info alongside data.
+     *
+     * Features of the generated class:
+     * - totalCount: Number of items in the current page.
+     * - totalPages: Total number of available pages.
+     * - currentPage: The currently active page (1-based).
+     * - pageSize: The number of items per page.
+     * - hasNextPage: Whether there is a next page.
+     * - hasPreviousPage: Whether there is a previous page.
+     *
+     * @returns {Array<Object>} An array with a single Java file definition:
+     *   - {string} name: The generated file path for `PageInfo.java`.
+     *   - {string} content: The full Java source code for the `PageInfo` class.
+     */
     generatePageInfoFile()
     {
         const content = `package ${this.packageName}.utils;

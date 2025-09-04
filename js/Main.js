@@ -296,4 +296,41 @@ document.addEventListener('DOMContentLoaded', () => {
         
         generator.createZipFile(selectedModel, config, document.querySelector('#artifactId').value + ".zip");
     });
+
+
+
+    const formToSave = document.getElementById("configForm");
+    const storageKey = "formConfigData";
+
+    // Restore data on page load
+    function restoreForm() {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) return;
+
+        const data = JSON.parse(saved);
+        Object.keys(data).forEach(name => {
+            const el = formToSave.querySelector(`[name="${name}"]`);
+            if (el) {
+                el.value = data[name];
+            }
+        });
+    }
+
+    // Save data whenever a field changes
+    function backupForm() {
+        const data = {};
+        const elements = form.querySelectorAll("input[type=text], input[type=number], input[type=password], select");
+        elements.forEach(el => {
+            data[el.name] = el.value;
+        });
+        localStorage.setItem(storageKey, JSON.stringify(data));
+    }
+
+    // Attach listeners
+    formToSave.addEventListener("input", backupForm);
+    formToSave.addEventListener("change", backupForm);
+
+    // Restore on load
+    restoreForm();
+
 });

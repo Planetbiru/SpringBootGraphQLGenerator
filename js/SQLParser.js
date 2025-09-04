@@ -173,7 +173,6 @@ class SQLParser {
                 tableParser.parseData(contents); // Parse original SQL content (INSERT INTO) to extract row data
 
                 let importedEntities = _this.createEntitiesFromSQL(tableParser.tableInfo); // Convert table structures into editor entities
-
                 if (typeof callback === 'function') {
                     importedEntities = _this.calculateEntityDepth(importedEntities);
                     callback({entities: importedEntities}); // Invoke callback with updated entity list
