@@ -9,10 +9,6 @@
  */
 class Maven
 {
-    constructor() {
-        // Constructor logic if needed
-    }
-    
     /**
      * Generates a Maven wrapper script for Windows systems.
      * @returns {Array} An array containing an object with the name and content of the Maven wrapper script.

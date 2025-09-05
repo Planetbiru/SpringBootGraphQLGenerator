@@ -107,7 +107,7 @@ class GraphQLSpringGenerator {
         let databaseConfig = {
             url: document.querySelector('#dbUrl').value.trim(),
             username: document.querySelector('#dbUsername').value.trim(),
-            password: document.querySelector('#dbPassword').value, // jangan trim password
+            password: document.querySelector('#dbPassword').value, // do not trim password
             driver: document.querySelector('#dbDriver').value.trim(),
             showSql: document.querySelector('#dbShowSql').value === 'true',      
             dialect: document.querySelector('#dbDialect').value.trim()
@@ -238,7 +238,7 @@ class GraphQLSpringGenerator {
                     progressBar.setAttribute("aria-valuenow", percent);
                 }
             });
-            _this.status(`Finished in ${((new Date()) - _this.startTime) / 1000} seconds (${fileSize} bytes)`);
+            _this.status(`Finished in ${((new Date()) - _this.startTime) / 1000} seconds (${virtualFiles.length} files ${fileSize} bytes)`);
             progressBar.style.width = "100%";
             progressBar.setAttribute("aria-valuenow", 100);
             saveAs(content, outputFileName);
@@ -282,15 +282,15 @@ class GraphQLSpringGenerator {
     /**
      * Remove unused import statements from a generated Java file content.
      *
-     * @param {string} content - The full Java file content as string.
-     * @returns {string} - Cleaned Java file content with unused imports removed.
+     * @param {string} content - The full Java file content as a string.
+     * @returns {string} - The cleaned Java file content with only the used imports.
      */
     removeUnusedImports(content) {
-        // Ambil semua baris import
+        // Get all import lines
         const lines = content.split("\n");
         const importLines = lines.filter(line => line.trim().startsWith("import "));
         
-        // Gabungkan isi class (selain baris import)
+        // Combine the class body (excluding import lines)
         const classBody = lines
             .filter(line => !line.trim().startsWith("import "))
             .join("\n");
@@ -298,12 +298,12 @@ class GraphQLSpringGenerator {
         let usedImports = [];
 
         importLines.forEach(importLine => {
-            const match = importLine.match(/import\s+([\w\.]+);/);
+            const match = importLine.match(/import\s+([\w\.]+);/); // NOSONAR
             if (match) {
                 const fqcn = match[1]; // fully qualified class name
-                const className = fqcn.split(".").pop(); // ambil nama class terakhir
+                const className = fqcn.split(".").pop(); // get the last part (class name)
 
-                // cek apakah nama class dipakai di body
+                // check if the class name is used in the body
                 const regex = new RegExp("\\b" + className + "\\b");
                 if (regex.test(classBody)) {
                     usedImports.push(importLine);
@@ -311,7 +311,7 @@ class GraphQLSpringGenerator {
             }
         });
 
-        // Buat ulang isi file dengan hanya import yang terpakai
+        // Rebuild file content with only the used imports
         const packageLine = lines.find(line => line.startsWith("package "));
         const otherLines = lines.filter(line => 
             !line.startsWith("package ") && 
@@ -324,7 +324,7 @@ class GraphQLSpringGenerator {
             ...usedImports,
             "",
             ...otherLines
-        ].join("\n").replace(/\n{3,}/g, "\n\n"); // rapikan spasi kosong
+        ].join("\n").replace(/\n{3,}/g, "\n\n"); // clean up extra blank lines
     }
 
 
@@ -1239,7 +1239,7 @@ public class DataOrder {
         let relations = [];
         let isCompositeKey = this.getPrimaryKeys(entity).length > 1;
         
-        // Periksa kolom di entitas utama
+        // Check column in main entity
         entity.columns.forEach(col => {
             if (this.isForeignKey(entities, entity, col) && !isCompositeKey) {
                 let relationName = StringUtil.camelize(col.name.replace(/_id$/i, ""));
@@ -2073,33 +2073,32 @@ public class PageUtil {
 
     
     /**
-     * Memeriksa apakah sebuah kolom adalah kunci asing dengan mencari kunci primer yang cocok
-     * di entitas lain.
-     * @param {Array<Object>} modelEntities - Daftar semua entitas dalam model.
-     * @param {Object} entityToCheck - Entitas tempat kolom berada.
-     * @param {Object} columnToCheck - Kolom yang akan diperiksa.
-     * @returns {boolean} True jika kolom adalah kunci asing, false sebaliknya.
+     * Checks whether a column is a foreign key by looking for a matching primary key
+     * in another entity.
+     * 
+     * @param {Array<Object>} modelEntities - List of all entities in the model.
+     * @param {Object} entityToCheck - The entity where the column belongs.
+     * @param {Object} columnToCheck - The column to be checked.
+     * @returns {boolean} True if the column is a foreign key, false otherwise.
      */
     isForeignKey(modelEntities, entityToCheck, columnToCheck) {
-        // Kolom tidak bisa menjadi foreign key untuk dirinya sendiri.
+        // A column cannot be a foreign key for itself.
         if (columnToCheck.primaryKey) {
             return false;
         }
         
-
-        // Iterasi melalui setiap entitas dalam model.
+        // Iterate through each entity in the model.
         for (const entity of modelEntities) {
-            // Kita hanya perlu memeriksa entitas yang berbeda dari entitas yang sedang kita periksa.
+            // Only check entities that are different from the one currently being checked.
             if (entity.name === entityToCheck.name) {
                 continue;
             }
             
-
-            // Dapatkan semua primary key dari entitas lain.
+            // Get all primary keys from the other entity.
             const primaryKeys = this.getPrimaryKeys(entity);
 
-            // Periksa apakah nama kolom yang kita cek cocok dengan nama salah satu primary key
-            // di entitas lain.
+            // Check if the column name matches any primary key name
+            // in the other entity.
             for (const pk of primaryKeys) {
                 if (pk.name === columnToCheck.name) {
                     return true;
@@ -2109,6 +2108,7 @@ public class PageUtil {
         
         return false;
     }
+
 
     /**
      * Generates ID class files for entities with composite primary keys.

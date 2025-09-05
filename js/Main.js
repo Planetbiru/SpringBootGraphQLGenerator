@@ -266,11 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        
+
         generator.createZipFile(selectedModel, config, document.querySelector('#artifactId').value + ".zip");
     });
-
-
 
     const formToSave = document.getElementById("configForm");
     const storageKey = "formConfigData";

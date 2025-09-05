@@ -4,7 +4,7 @@ Spring Boot GraphQL Generator is an automatic code generator for building GraphQ
 
 ## Features
 
-* **Input Options:**
+* **Input:**
 
   * SQL files containing `CREATE TABLE` statements
   * SQLite database files
@@ -12,17 +12,21 @@ Spring Boot GraphQL Generator is an automatic code generator for building GraphQ
 * **Configuration:**
   Users can specify:
 
-  * Package name
-  * Artifact name
-  * Database driver
-  * Host and port
-  * Database username and password
+  * Java package name
+  * Group ID and Artifact ID
+  * Service name and description
+  * Java and application version
+  * Application port
+  * Database configuration: JDBC URL, username, password, driver, dialect
 
 * **Output:**
 
-  * A ready-to-use Spring Boot application with GraphQL and JPA integration
-  * The generated project can be built and executed immediately
-  * Fully customizable codebase for further development
+  * Ready-to-use Spring Boot project with GraphQL and JPA integration
+  * Maven wrapper files (`mvnw`, `mvnw.cmd`, `.mvn/wrapper/maven-wrapper.properties`)
+  * Application configuration file (`application.properties`)
+  * Java code: entity, DTO, repository, controller, utility, and GraphQL schema
+  * Automatically generated ERD (Entity Relationship Diagram)
+  * Entity structure documentation in Markdown format
 
 * **Diagram Renderer:**
 
@@ -32,11 +36,12 @@ Spring Boot GraphQL Generator is an automatic code generator for building GraphQ
 
 ## How It Works
 
-1. The user provides an SQL file or a SQLite database file as input.
-2. The user configures the application settings as needed.
-3. The generator creates a complete Spring Boot project with GraphQL and JPA support.
-4. The **Diagram Renderer** produces an ERD for the database structure.
-5. The generated application can be run instantly and customized as required.
+1. Select an SQL or SQLite file as input.
+2. Fill in application and database configuration via the form.
+3. View the ERD diagram and detected entity descriptions.
+4. Select entities to generate.
+5. The generator creates the entire Spring Boot GraphQL project automatically.
+6. Download the result as a ZIP file, ready to build with Maven.
 
 ## Purpose
 
@@ -45,3 +50,7 @@ Spring Boot GraphQL Generator aims to simplify and accelerate the process of cre
 ## Data Sample
 
 https://github.com/Planetbiru/DatabaseSample
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
