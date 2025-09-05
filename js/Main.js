@@ -7,57 +7,6 @@ let updatedWidth = 600;
 let drawRelationship = true;
 
 /**
- * Autopopulates the JDBC driver class name and Hibernate dialect
- * based on the provided JDBC URL.
- *
- * Supported databases:
- * - MySQL, MariaDB, PostgreSQL, SQLite, Oracle, SQL Server,
- *   H2, Derby, DB2, Firebird, Sybase
- *
- * @param {string} url - The JDBC connection URL (e.g., "jdbc:mysql://localhost:3306/db")
- * @returns {void}
- */
-function autopopulateDriverAndDialect(url) {
-    const dbDriverInput = document.getElementById("dbDriver");
-    const dbDialectInput = document.getElementById("dbDialect");
-
-    if (url.startsWith("jdbc:mysql:")) {
-        dbDriverInput.value = "com.mysql.cj.jdbc.Driver";
-        dbDialectInput.value = "org.hibernate.dialect.MySQL8Dialect";
-    } else if (url.startsWith("jdbc:mariadb:")) {
-        dbDriverInput.value = "org.mariadb.jdbc.Driver";
-        dbDialectInput.value = "org.hibernate.dialect.MariaDBDialect";
-    } else if (url.startsWith("jdbc:postgresql:")) {
-        dbDriverInput.value = "org.postgresql.Driver";
-        dbDialectInput.value = "org.hibernate.dialect.PostgreSQLDialect";
-    } else if (url.startsWith("jdbc:sqlite:")) {
-        dbDriverInput.value = "org.sqlite.JDBC";
-        dbDialectInput.value = "org.hibernate.dialect.SQLiteDialect"; // custom
-    } else if (url.startsWith("jdbc:oracle:")) {
-        dbDriverInput.value = "oracle.jdbc.OracleDriver";
-        dbDialectInput.value = "org.hibernate.dialect.Oracle12cDialect";
-    } else if (url.startsWith("jdbc:sqlserver:")) {
-        dbDriverInput.value = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-        dbDialectInput.value = "org.hibernate.dialect.SQLServer2012Dialect";
-    } else if (url.startsWith("jdbc:h2:")) {
-        dbDriverInput.value = "org.h2.Driver";
-        dbDialectInput.value = "org.hibernate.dialect.H2Dialect";
-    } else if (url.startsWith("jdbc:derby:")) {
-        dbDriverInput.value = "org.apache.derby.jdbc.EmbeddedDriver";
-        dbDialectInput.value = "org.hibernate.dialect.DerbyDialect";
-    } else if (url.startsWith("jdbc:db2:")) {
-        dbDriverInput.value = "com.ibm.db2.jcc.DB2Driver";
-        dbDialectInput.value = "org.hibernate.dialect.DB2Dialect";
-    } else if (url.startsWith("jdbc:firebird:")) {
-        dbDriverInput.value = "org.firebirdsql.jdbc.FBDriver";
-        dbDialectInput.value = "org.hibernate.dialect.FirebirdDialect"; // custom
-    } else if (url.startsWith("jdbc:sybase:")) {
-        dbDriverInput.value = "com.sybase.jdbc4.jdbc.SybDriver";
-        dbDialectInput.value = "org.hibernate.dialect.SybaseDialect";
-    }
-}
-
-/**
  * Autopopulates groupId, artifactId, and serviceName
  * based on the given Java package name.
  *
@@ -180,6 +129,24 @@ function createSelector(tbody, model)
     }
 }
 
+function updateDbConfig(url) {
+    const { driver, dialect } = generator.getDriverAndDialect(url);
+    const dbDriverInput = document.getElementById("dbDriver");
+    const dbDialectInput = document.getElementById("dbDialect");
+
+    if (driver && dialect) {
+        dbDriverInput.value = driver;
+        dbDialectInput.value = dialect;
+        dbDriverInput.classList.remove("invalid");
+        dbDialectInput.classList.remove("invalid");
+    } else {
+        dbDriverInput.value = "";
+        dbDialectInput.value = "";
+        dbDriverInput.classList.add("invalid");
+        dbDialectInput.classList.add("invalid");
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('configForm');
     const packageNameInput = document.getElementById("packageName");
@@ -201,10 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     dbUrlInput.addEventListener('change', function (e) {
-        autopopulateDriverAndDialect(e.target.value);
+        updateDbConfig(e.target.value);
     });
     dbUrlInput.addEventListener('keyup', function (e) {
-        autopopulateDriverAndDialect(e.target.value);
+        updateDbConfig(e.target.value);
     });
 
     sqlFileInput.addEventListener('change', function (e) {
@@ -212,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sqlFile = formData.get('sqlFile');
         if (sqlFile) {
             let tbody = document.querySelector('#entity-selection-body');
-            
+            generator.status("Import SQL file");
             sqlParser.importSQLFile(sqlFile, (model) => {
                 model.entities = model.entities.filter(entity => entity.name !== 'sqlite_sequence');
                 applyModel(model);
@@ -223,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 entityRenderer.createERD(model, updatedWidth, drawRelationship);
                 entityRenderer.createDescription(model, '#erd-description');
                 createSelector(tbody, model);
+                generator.status("Finish");
             });
         }
     });
@@ -243,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sqlFileInit = formDataInit.get('sqlFile');
     if (sqlFileInit) {
         let tbody = document.querySelector('#entity-selection-body');
-        
+        generator.status("Import SQL file");
         sqlParser.importSQLFile(sqlFileInit, (model) => {
             model.entities = model.entities.filter(entity => entity.name !== 'sqlite_sequence');
             applyModel(model);
@@ -254,11 +222,14 @@ document.addEventListener('DOMContentLoaded', () => {
             entityRenderer.createERD(model, updatedWidth, drawRelationship);
             entityRenderer.createDescription(model, '#erd-description');
             createSelector(tbody, model);
+            generator.status("Finish");
         });
     }
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
+        let startTime = new Date();
+        generator.status("Get information given in the form");
         const formData = new FormData(form);
         const config = {
             packageName: formData.get('packageName'),
@@ -269,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             javaVersion: formData.get('javaVersion'),
             version: formData.get('version'),
             maxRelationDepth: parseInt(formData.get('maxRelationDepth')) || 3,
+            startTime: startTime
         };
         let selectedModel = {entities: []};
         const checkboxesBody = document.querySelectorAll('#entity-selection-body input[type="checkbox"]');
@@ -283,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             let model = generator.getModel();
+            generator.status("Apply selected entities");
             if(model?.entities)
             {
                 model.entities.forEach(entity => {

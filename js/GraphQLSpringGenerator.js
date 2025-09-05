@@ -83,9 +83,22 @@ class GraphQLSpringGenerator {
     }
 
     /**
-     * Generates all virtual files required for the Spring GraphQL project.
-     * Includes entity, repository, service, controller, schema, and pom files.
-     * @returns {Array} Array of file objects with 'name' and 'content'.
+     * Generates all virtual source files required for a Spring Boot GraphQL project.
+     * This includes configuration files, domain models, data access layers, business services,
+     * API controllers, GraphQL schema, and build scripts (e.g., Maven files).
+     *
+     * The generated files cover:
+     * - Project setup: pom.xml, Maven wrapper, build scripts
+     * - Application bootstrap: main class, application.properties
+     * - Domain layer: ID classes, entities, DTOs, connections
+     * - Data access: repositories
+     * - Utilities: pagination, specifications, filters, ordering
+     * - Business logic: service classes
+     * - API layer: REST controllers, GraphQL schema
+     * - Configuration: CORS settings, request interceptors
+     *
+     * @returns {Array<{name: string, content: string}>} An array of virtual file objects,
+     *          each containing a filename and its corresponding content.
      */
     generateVirtualFiles() {
         let appConfig = {
@@ -104,7 +117,7 @@ class GraphQLSpringGenerator {
 
         // 1. Build & Project Setup
         this.status("Generate pom file");
-        files.push(...this.generatePomFile());
+        files.push(...this.generatePomFile(databaseConfig.url));
         this.status("Generate maven file");
         files.push(...Maven.generateMavenFile());
         this.status("Generate maven.cmd file");
@@ -161,7 +174,6 @@ class GraphQLSpringGenerator {
         files.push(...this.generateCorsConfigFile());
         this.status("Generate request interceptor file");
         files.push(...this.generateRequestInterceptorFile());
-
         
         return files;
     }
@@ -187,6 +199,7 @@ class GraphQLSpringGenerator {
         this.javaVersion = config.javaVersion || "21";
         this.version = config.version || "1.0.0";
         this.maxRelationDepth = 3; // Default max depth for nested relations
+        this.startTime = config.startTime;
         if(model)
         {
             this.selectedModel = model;
@@ -203,9 +216,11 @@ class GraphQLSpringGenerator {
             loadingMessage.style.display = 'none';
             return;
         }
+        let fileSize = 0;
         const zip = new JSZip();
         for (const file of virtualFiles) {
             zip.file(file.name, file.content);
+            fileSize += file.content.length;
         }
         try {
             _this.status("Generating ZIP file...");
@@ -223,7 +238,7 @@ class GraphQLSpringGenerator {
                     progressBar.setAttribute("aria-valuenow", percent);
                 }
             });
-            _this.status("Finish");
+            _this.status(`Finished in ${((new Date()) - _this.startTime) / 1000} seconds (${fileSize} bytes)`);
             progressBar.style.width = "100%";
             progressBar.setAttribute("aria-valuenow", 100);
             saveAs(content, outputFileName);
@@ -231,13 +246,11 @@ class GraphQLSpringGenerator {
             
             
         } catch (error) {
-            console.error('Gagal membuat file ZIP:', error);
+            console.error('Error generating ZIP file: ', error);
         } finally {
             loadingMessage.style.display = 'none';
         }
     }
-
-    
 
     /**
      * Returns all primary key columns from an entity.
@@ -265,6 +278,55 @@ class GraphQLSpringGenerator {
         }
         return null;
     }
+
+    /**
+     * Remove unused import statements from a generated Java file content.
+     *
+     * @param {string} content - The full Java file content as string.
+     * @returns {string} - Cleaned Java file content with unused imports removed.
+     */
+    removeUnusedImports(content) {
+        // Ambil semua baris import
+        const lines = content.split("\n");
+        const importLines = lines.filter(line => line.trim().startsWith("import "));
+        
+        // Gabungkan isi class (selain baris import)
+        const classBody = lines
+            .filter(line => !line.trim().startsWith("import "))
+            .join("\n");
+
+        let usedImports = [];
+
+        importLines.forEach(importLine => {
+            const match = importLine.match(/import\s+([\w\.]+);/);
+            if (match) {
+                const fqcn = match[1]; // fully qualified class name
+                const className = fqcn.split(".").pop(); // ambil nama class terakhir
+
+                // cek apakah nama class dipakai di body
+                const regex = new RegExp("\\b" + className + "\\b");
+                if (regex.test(classBody)) {
+                    usedImports.push(importLine);
+                }
+            }
+        });
+
+        // Buat ulang isi file dengan hanya import yang terpakai
+        const packageLine = lines.find(line => line.startsWith("package "));
+        const otherLines = lines.filter(line => 
+            !line.startsWith("package ") && 
+            !line.startsWith("import ")
+        );
+
+        return [
+            packageLine,
+            "",
+            ...usedImports,
+            "",
+            ...otherLines
+        ].join("\n").replace(/\n{3,}/g, "\n\n"); // rapikan spasi kosong
+    }
+
 
     /**
      * Creates the source directory path from the packageName string.
@@ -1522,6 +1584,7 @@ import lombok.Getter;
 
         entityContent += `}
 `;
+        entityContent = this.removeUnusedImports(entityContent);
         file.push({
             name: this.createSourceDirectoryFromArtefact(this.packageName) + `entity/${upperCamelEntityName}.java`,
             content: entityContent
@@ -1588,7 +1651,7 @@ import lombok.Getter;
 
         entityInputContent += `}
 `;
-
+            entityInputContent = this.removeUnusedImports(entityInputContent);
             file.push({
                 name: this.createSourceDirectoryFromArtefact(this.packageName) + `entity/${upperCamelEntityName}Input.java`,
                 content: entityInputContent
@@ -1689,7 +1752,7 @@ import ${this.packageName}.entity.${upperCamelEntityName}Input;
 
         entityCreateContent += `}
 `;
-
+            entityCreateContent = this.removeUnusedImports(entityCreateContent);
             file.push({
                 name: this.createSourceDirectoryFromArtefact(this.packageName) + `dto/${upperCamelEntityName}Create.java`,
                 content: entityCreateContent
@@ -1750,6 +1813,7 @@ import ${this.packageName}.entity.${upperCamelEntityName}Input;
 `;
         entityUpdateContent += `}
 `;
+            entityUpdateContent = this.removeUnusedImports(entityUpdateContent);
             file.push({
                 name: this.createSourceDirectoryFromArtefact(this.packageName) + `dto/${upperCamelEntityName}Update.java`,
                 content: entityUpdateContent
@@ -2190,7 +2254,7 @@ public class PageInfo {
      * Generates the Maven pom.xml file for the project.
      * @returns {Array} Array containing the pom.xml file object.
      */
-    generatePomFile() {
+    generatePomFile(dbUrl) {
         const config = {
             groupId: this.groupId,
             artifactId: this.artifactId,
@@ -2200,6 +2264,23 @@ public class PageInfo {
             javaVersion: this.javaVersion,
             packageName: this.packageName
         };
+
+    const { dependency } = this.getDriverAndDialect(dbUrl);
+
+    const dependenciesXml = [dependency].map(dep => {
+        const lines = [
+            `	<dependency>`,
+            `		<groupId>${dep.groupId}</groupId>`,
+            `		<artifactId>${dep.artifactId}</artifactId>`
+        ];
+        if (dep.version) lines.push(`		<version>${dep.version}</version>`);
+        if (dep.scope) lines.push(`		<scope>${dep.scope}</scope>`);
+        if (dep.optional) lines.push(`		<optional>true</optional>`);
+        lines.push(`	</dependency>`);
+        return lines.join("\n");
+    }).join("\n\n");
+
+
         const pomXmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -2232,56 +2313,40 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <java.version>${config.javaVersion}</java.version>
 </properties>
 <dependencies>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-graphql</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-webflux</artifactId>
-    </dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-web</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-data-jpa</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-graphql</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-webflux</artifactId>
+	</dependency>
 
-    <dependency>
-        <groupId>com.mysql</groupId>
-        <artifactId>mysql-connector-j</artifactId>
-        <scope>runtime</scope>
-    </dependency>
+${dependenciesXml}
 
-    <dependency>
-        <groupId>org.mariadb.jdbc</groupId>
-        <artifactId>mariadb-java-client</artifactId>
-        <version>3.5.1</version>
-    </dependency>
-
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <version>42.7.4</version>
-    </dependency>
-    
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>io.projectreactor</groupId>
-        <artifactId>reactor-test</artifactId>
-        <scope>test</scope>
-    </dependency>
+	<dependency>
+		<groupId>org.projectlombok</groupId>
+		<artifactId>lombok</artifactId>
+		<optional>true</optional>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-test</artifactId>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>io.projectreactor</groupId>
+		<artifactId>reactor-test</artifactId>
+		<scope>test</scope>
+	</dependency>
 </dependencies>
 
 <build>
@@ -2359,8 +2424,136 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     
     
     
-    
-    
+    getDriverAndDialect(url) {
+    if (url.startsWith("jdbc:mysql:")) {
+        return {
+            driver: "com.mysql.cj.jdbc.Driver",
+            dialect: "org.hibernate.dialect.MySQL8Dialect",
+            dependency: {
+                groupId: "com.mysql",
+                artifactId: "mysql-connector-j",
+                scope: "runtime"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:mariadb:")) {
+        return {
+            driver: "org.mariadb.jdbc.Driver",
+            dialect: "org.hibernate.dialect.MariaDBDialect",
+            dependency: {
+                groupId: "org.mariadb.jdbc",
+                artifactId: "mariadb-java-client",
+                version: "3.5.1"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:postgresql:")) {
+        return {
+            driver: "org.postgresql.Driver",
+            dialect: "org.hibernate.dialect.PostgreSQLDialect",
+            dependency: {
+                groupId: "org.postgresql",
+                artifactId: "postgresql",
+                version: "42.7.4"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:sqlite:")) {
+        return {
+            driver: "org.sqlite.JDBC",
+            dialect: "org.hibernate.dialect.SQLiteDialect", // custom
+            dependency: {
+                groupId: "org.xerial",
+                artifactId: "sqlite-jdbc",
+                version: "3.45.1.0"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:oracle:")) {
+        return {
+            driver: "oracle.jdbc.OracleDriver",
+            dialect: "org.hibernate.dialect.Oracle12cDialect",
+            dependency: {
+                groupId: "com.oracle.database.jdbc",
+                artifactId: "ojdbc11",
+                version: "23.3.0.23.09"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:sqlserver:")) {
+        return {
+            driver: "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+            dialect: "org.hibernate.dialect.SQLServer2012Dialect",
+            dependency: {
+                groupId: "com.microsoft.sqlserver",
+                artifactId: "mssql-jdbc",
+                version: "12.6.1.jre11"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:h2:")) {
+        return {
+            driver: "org.h2.Driver",
+            dialect: "org.hibernate.dialect.H2Dialect",
+            dependency: {
+                groupId: "com.h2database",
+                artifactId: "h2",
+                version: "2.2.224"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:derby:")) {
+        return {
+            driver: "org.apache.derby.jdbc.EmbeddedDriver",
+            dialect: "org.hibernate.dialect.DerbyDialect",
+            dependency: {
+                groupId: "org.apache.derby",
+                artifactId: "derby",
+                version: "10.15.2.0"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:db2:")) {
+        return {
+            driver: "com.ibm.db2.jcc.DB2Driver",
+            dialect: "org.hibernate.dialect.DB2Dialect",
+            dependency: {
+                groupId: "com.ibm.db2",
+                artifactId: "jcc",
+                version: "11.5.8.0"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:firebird:")) {
+        return {
+            driver: "org.firebirdsql.jdbc.FBDriver",
+            dialect: "org.hibernate.dialect.FirebirdDialect", // custom
+            dependency: {
+                groupId: "org.firebirdsql.jdbc",
+                artifactId: "jaybird-jdk18",
+                version: "4.0.3"
+            }
+        };
+    }
+    if (url.startsWith("jdbc:sybase:")) {
+        return {
+            driver: "com.sybase.jdbc4.jdbc.SybDriver",
+            dialect: "org.hibernate.dialect.SybaseDialect",
+            dependency: {
+                groupId: "com.sybase",
+                artifactId: "jconn4",
+                version: "7.07"
+            }
+        };
+    }
+
+    return {
+        driver: "",
+        dialect: "",
+        dependency: null
+    };
+}
+        
     
     
     /**
