@@ -2185,11 +2185,11 @@ public class ${idClassName} implements Serializable {
     }
 
     /**
-     * Generates the GraphQL schema file from the model entities.
+     * Generates the GraphQL schema file from the selectedModel entities.
      * @returns {Array} Array containing the GraphQL schema file object.
      */
     generateGraphQlSchema() {
-        let content = util.buildGraphQLSchema(this.model.entities, false);
+        let content = util.buildGraphQLSchema(this.selectedModel.entities, false);
         return [{ name: "src/main/resources/graphql/schema.graphqls", content: content }];
     }
 
