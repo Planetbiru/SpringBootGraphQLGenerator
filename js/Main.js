@@ -321,6 +321,14 @@ function checkAllColumns(source) {
     const checkboxes = source.closest('table').querySelectorAll('.check-column');
     if(checkboxes?.length)
     {
+        if(!source.checked)
+        {
+            let wrapper = source.closest('table').closest('div');
+            if(wrapper)
+            {
+                wrapper.querySelector('h5 input').checked = false;
+            }
+        }
         checkboxes.forEach(checkbox => {
             checkbox.checked = source.checked;
         });
