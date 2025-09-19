@@ -840,13 +840,22 @@ class EntityRenderer {
     addDescription(entity, wrapper) {
         let container = document.createElement("div");
         container.classList.add("mb-4");
+        
+        let entitySelector = document.createElement("input");
+        entitySelector.type = "checkbox";
+        entitySelector.className = "entity-selector";
+        entitySelector.value = entity.name;
+        entitySelector.checked = true;
 
         let title = document.createElement("h5");
-        title.textContent = entity.name;
+        title.appendChild(entitySelector);
+        title.appendChild(document.createTextNode(" "));
+        title.appendChild(document.createTextNode(entity.name));
         container.appendChild(title);
 
         let table = document.createElement("table");
         table.className = "table table-bordered table-striped table-sm";
+        table.dataset.entity = entity.name;
 
         // Tambahkan styling khusus
         table.style.width = "100%";
@@ -855,11 +864,12 @@ class EntityRenderer {
         let thead = document.createElement("thead");
         thead.innerHTML = `
             <tr>
-                <th style="width: 25%;">Column</th>
+                <th style="width: 23px;"><input type="checkbox" class="check-all" onchange="checkAllColumns(this)" checked></th>
+                <th style="width: 24%;">Column</th>
                 <th style="width: 20%;">Type</th>
                 <th style="width: 10%;">PK</th>
                 <th style="width: 10%;">Serial</th>
-                <th style="width: 15%;">Nullable</th>
+                <th style="width: 14%;">Nullable</th>
                 <th style="width: 20%;">Default</th>
             </tr>
         `;
@@ -877,10 +887,11 @@ class EntityRenderer {
             }
 
             tr.innerHTML = `
+                <td><input type="checkbox" class="check-column" value="${col.name || ''}" checked></td>
                 <td>${col.name || ""}</td>
                 <td>${typeDisplay}</td>
-                <td style="text-align: center;">${col.primaryKey ? "✓" : ""}</td>
-                <td style="text-align: center;">${col.autoIncrement ? "✓" : ""}</td>
+                <td style="text-align: center;">${col.primaryKey ? "YES" : "NO"}</td>
+                <td style="text-align: center;">${col.autoIncrement ? "YES" : "NO"}</td>
                 <td style="text-align: center;">${col.nullable ? "YES" : "NO"}</td>
                 <td>${col.defaultValue != null ? col.defaultValue : ""}</td>
             `;

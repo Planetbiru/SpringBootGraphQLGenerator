@@ -66,6 +66,30 @@ function applyModel(model) {
     generator.setModel(model);
 }
 
+function cloneEntity(entity, tableElement) {
+    let cloned = JSON.parse(JSON.stringify(entity));
+    if(tableElement)
+    {
+        let checkboxes = tableElement.querySelectorAll('input.check-column');
+        if(checkboxes?.length)
+        {
+            let selectedColumns = [];
+            checkboxes.forEach(checkbox => {
+                if(checkbox.checked)
+                {
+                    selectedColumns.push(checkbox.value);
+                }
+            });
+
+            if(selectedColumns.length)
+            {
+                cloned.columns = cloned.columns.filter(col => selectedColumns.includes(col.name));
+            }
+        }
+    }
+    return cloned;
+}
+
 let resizeTimeout;
 
 window.addEventListener('resize', () => {
@@ -86,7 +110,7 @@ window.addEventListener('resize', () => {
                 drawRelationship
             );
 
-            entityRenderer.createDescription(generator.getModel(), '#erd-description');
+            entityRenderer.createDescription(generator.getModel(), '#erd-selection');
             createSelector(tbody, generator.getModel());
         }
     }, 30); 
@@ -99,7 +123,6 @@ function createSelector(tbody, model)
     {
         model.entities.forEach(entity => {
             let tr = document.createElement('tr');
-            let td1 = document.createElement('td');
             let td2 = document.createElement('td');
             let td3 = document.createElement('td');
             
@@ -109,7 +132,6 @@ function createSelector(tbody, model)
             input.classList.add('selected-entity');
             input.value = entity.name;
             
-            td1.appendChild(input);
             td2.innerHTML = entity.name;
             
             let result = '';
@@ -121,7 +143,6 @@ function createSelector(tbody, model)
             }
 
             td3.innerHTML = result;
-            tr.appendChild(td1);
             tr.appendChild(td2);
             tr.appendChild(td3);
             tbody.appendChild(tr);
@@ -178,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(form);
         const sqlFile = formData.get('sqlFile');
         if (sqlFile) {
-            let tbody = document.querySelector('#entity-selection-body');
+            let tbody = document.querySelector('#entity-primary-key-body');
             generator.status("Import SQL file");
             sqlParser.importSQLFile(sqlFile, (model) => {
                 model.entities = model.entities.filter(entity => entity.name !== 'sqlite_sequence');
@@ -188,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatedWidth = 480;
                 }
                 entityRenderer.createERD(model, updatedWidth, drawRelationship);
-                entityRenderer.createDescription(model, '#erd-description');
+                entityRenderer.createDescription(model, '#erd-selection');
                 createSelector(tbody, model);
                 generator.status("Finish");
             });
@@ -196,21 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    const checkAllHeader = document.querySelector('.check-all');
-    checkAllHeader.checked = true;
-    
-    checkAllHeader.addEventListener('change', function() {
-        const checkboxesBody = document.querySelectorAll('#entity-selection-body input[type="checkbox"]');
-        const isChecked = this.checked;
-        checkboxesBody.forEach(checkbox => {
-            checkbox.checked = isChecked;
-        });
-    });
-
     const formDataInit = new FormData(form);
     const sqlFileInit = formDataInit.get('sqlFile');
     if (sqlFileInit) {
-        let tbody = document.querySelector('#entity-selection-body');
+        let tbody = document.querySelector('#entity-primary-key-body');
         generator.status("Import SQL file");
         sqlParser.importSQLFile(sqlFileInit, (model) => {
             model.entities = model.entities.filter(entity => entity.name !== 'sqlite_sequence');
@@ -220,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatedWidth = 480;
             }
             entityRenderer.createERD(model, updatedWidth, drawRelationship);
-            entityRenderer.createDescription(model, '#erd-description');
+            entityRenderer.createDescription(model, '#erd-selection');
             createSelector(tbody, model);
             generator.status("Finish");
         });
@@ -243,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
             startTime: startTime
         };
         let selectedModel = {entities: []};
-        const checkboxesBody = document.querySelectorAll('#entity-selection-body input[type="checkbox"]');
+        const checkboxesBody = document.querySelectorAll('input[type="checkbox"].entity-selector');
         if(checkboxesBody.length)
         {
             let selected = [];
@@ -261,7 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 model.entities.forEach(entity => {
                     if(selected.includes(entity.name))
                     {
-                        selectedModel.entities.push(entity); 
+                        let newEntity = cloneEntity(entity, document.querySelector(`table[data-entity="${entity.name}"]`));
+                        selectedModel.entities.push(newEntity); 
                     }
                 });
             }
@@ -305,3 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreForm();
 
 });
+
+function checkAllColumns(source) {
+    const checkboxes = source.closest('table').querySelectorAll('.check-column');
+    if(checkboxes?.length)
+    {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = source.checked;
+        });
+    }
+}

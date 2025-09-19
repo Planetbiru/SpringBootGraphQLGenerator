@@ -23,7 +23,7 @@
   <script src="js/sql-wasm.min.js"></script>
   <script src="js/Main.min.js"></script>
   <style>
-    .erd-wrapper, #erd-description, #entity-selection{
+    .erd-wrapper, #erd-selection, #entity-primary-key{
       position: relative;
       max-height: 320px;
       overflow: auto;
@@ -68,13 +68,13 @@
                   </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab" aria-controls="description" aria-selected="false">
-                    Description
+                  <button class="nav-link" id="selection-tab" data-bs-toggle="tab" data-bs-target="#selection" type="button" role="tab" aria-controls="description" aria-selected="false">
+                    Selection
                   </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="selection-tab" data-bs-toggle="tab" data-bs-target="#selection" type="button" role="tab" aria-controls="description" aria-selected="false">
-                    Selection
+                  <button class="nav-link" id="primaty-key-tab" data-bs-toggle="tab" data-bs-target="#primaty-key" type="button" role="tab" aria-controls="description" aria-selected="false">
+                    Primary Keys
                   </button>
                 </li>
               </ul>
@@ -87,34 +87,33 @@
                   </div>
                 </div>
 
-                <!-- Tab: Description -->
-                <div class="tab-pane fade" id="description" role="tabpanel" aria-labelledby="description-tab">
+                <!-- Tab: Selection -->
+                <div class="tab-pane fade" id="selection" role="tabpanel" aria-labelledby="selection-tab">
                   <!-- Anda bisa isi tabel deskripsi di sini -->
-                  <div id="erd-description">
+                  <div id="erd-selection">
                     <table class="table table-sm table-striped align-middle">
                       <thead>
                       <tr>
                         <th>Column</th><th>Type</th><th>PK</th><th>Nullable</th><th>Default</th>
                       </tr>
                       </thead>
-                      <tbody id="erd-description-body"></tbody>
+                      <tbody id="erd-selection-body"></tbody>
                     </table>
                   </div>
                 </div>
               
               
-              <!-- Tab: Selection -->
-                <div class="tab-pane fade" id="selection" role="tabpanel" aria-labelledby="selection-tab">
-                  <div id="entity-selection">
+              <!-- Tab: Primary Keys -->
+                <div class="tab-pane fade" id="primaty-key" role="tabpanel" aria-labelledby="primaty-key-tab">
+                  <div id="entity-primary-key">
                     <table class="table table-sm table-striped align-middle">
                       <thead>
                       <tr>
-                        <th width="20"><input type="checkbox" class="check-all" checked></th>
                         <th width="50%">Entity Name</th>
                         <th>Primary Keys</th>
                       </tr>
                       </thead>
-                      <tbody id="entity-selection-body"></tbody>
+                      <tbody id="entity-primary-key-body"></tbody>
                     </table>
                   </div>
                 </div>
